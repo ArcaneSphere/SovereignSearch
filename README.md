@@ -58,7 +58,7 @@ npm start
 ## To-Do's
 
 ### Core
-- [ ] Only index.html pages will load (most dApps ar good), considering a solution to this, but yeah many options..
+- [ ] Only index.html pages will load (most dApps are good), considering a solution to this, but yeah many options...
 - [ ] Sidebar collapse when pointer leaves, closes onClick somewhere outside sidebar
 - [ ] Gnomon settings menu + Gnomon alive/ready indicator
 - [ ] Autostart tela-server and Gnomon 
