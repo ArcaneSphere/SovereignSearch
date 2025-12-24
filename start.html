@@ -7,86 +7,117 @@
 <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 
 <style>
+  /* ---------- Scoped Search Page ---------- */
   body {
-    font-family: sans-serif;
-    background: #fafafa;
-    margin: 0;
-    padding: 0;
-    overflow-y: scroll; /* reserve scrollbar on body always */
+  overflow-y: scroll; /* reserve scrollbar space */
   }
 
-  h2 {
+  #searchPage {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #fafafa;
+    color: #202124;
+    min-height: 100%;
+    overflow-y: auto;
+    padding-bottom: 40px;
+  }
+
+  #searchPage h2 {
     text-align: center;
     margin-top: 30px;
+    font-weight: normal;
   }
 
-  #searchBox {
+  #searchPage #searchBox {
     display: block;
     margin: 30px auto;
     width: 60%;
     max-width: 600px;
     padding: 12px 16px;
     font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    border: 1px solid #dcdcdc;
+    border-radius: 24px;
+    outline: none;
   }
 
-  #status {
+  #searchPage #searchBox:focus {
+    border-color: #4285f4;
+  }
+
+  #searchPage #status {
     text-align: center;
-    margin-bottom: 20px;
-    color: #555;
+    margin-bottom: 24px;
+    color: #5f6368;
+    font-size: 14px;
   }
 
-  #results {
+  #searchPage #results {
     width: 80%;
     max-width: 900px;
-    margin: 0 auto 40px auto;
+    margin: 0 auto;
   }
 
-  .result {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 14px 16px;
-    margin-bottom: 14px;
+  /* ---------- Result Row ---------- */
+  #searchPage .result {
+    padding: 8px 0 20px 0;
+    border-bottom: 1px solid #eee;
   }
 
-  .scid {
-    font-weight: bold;
-    word-break: break-all;
+  /* Title */
+  #searchPage .nameHdr {
+    font-size: 20px;
+    line-height: 1.3;
+    margin-bottom: 4px;
+    color: #1a0dab;
+  }
+
+  /* SCID */
+  #searchPage .scid {
+    font-size: 13px;
     color: #0066cc;
     cursor: pointer;
+    word-break: break-all;
+    margin-bottom: 4px;
   }
 
-  .scid:hover {
+  #searchPage .scid:hover {
     text-decoration: underline;
   }
 
-  .url {
-    color: #444;
+  /* URL */
+  #searchPage .url {
+    font-size: 14px;
+    color: #202124;
+    margin-bottom: 6px;
     word-break: break-all;
   }
 
-  .meta {
-    margin-top: 6px;
-    color: #444;
+  /* Description */
+  #searchPage .descr {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #4d5156;
+    max-width: 90%;
   }
 </style>
 </head>
 
 <body>
 
-<h2>Search</h2>
+<div id="searchPage">
 
-<input
-  id="searchBox"
-  type="text"
-  placeholder="Search SCID, dURL, name or description..."
-  disabled
-/>
+  <h2>Search</h2>
 
-<div id="status">Fetching indexed SCIDs...</div>
-<div id="results"></div>
+  <input
+    id="searchBox"
+    type="text"
+    placeholder="Search SCID, dURL, name or description..."
+    disabled
+  />
+
+  <div id="status">Fetching indexed SCIDs...</div>
+  <div id="results"></div>
+
+</div>
 
 <script>
 const apiBase = "http://127.0.0.1:8099/api";
@@ -139,12 +170,15 @@ function renderResults(results) {
     div.className = "result";
 
     div.innerHTML = `
+      <div class="nameHdr">${r.nameHdr}</div>
+
       <div class="scid" onclick="handleSCIDClick('${r.scid}')">
         ${r.scid}
       </div>
+
       <div class="url">${r.dURL}</div>
-      <div class="meta">${r.nameHdr}</div>
-      <div class="meta">${r.descrHdr}</div>
+
+      <div class="descr">${r.descrHdr}</div>
     `;
 
     container.appendChild(div);
@@ -195,7 +229,7 @@ async function loadSCIDs() {
       { name: "nameHdr", weight: 1 },
       { name: "descrHdr", weight: 0.8 }
     ],
-    threshold: 0.35,
+    threshold: 0.25,
     ignoreLocation: true,
     minMatchCharLength: 2
   });
@@ -212,4 +246,3 @@ loadSCIDs();
 
 </body>
 </html>
-
