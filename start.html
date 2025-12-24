@@ -1,61 +1,215 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Start Page</title>
-  <style>
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-    h1 { font-size: 24px; margin-bottom: 10px; }
-    h2 { font-size: 18px; margin-top: 20px; }
-    ul { list-style-type: none; padding-left: 0; }
-    li { padding: 6px 0; cursor: pointer; }
-    li:hover { background: #ddd; }
-    .bookmark-name { font-weight: bold; }
-  </style>
+<meta charset="UTF-8">
+<title>SovereignSearch</title>
+
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+
+<style>
+  body {
+    font-family: sans-serif;
+    background: #fafafa;
+    margin: 0;
+    padding: 0;
+    overflow-y: scroll; /* reserve scrollbar on body always */
+  }
+
+  h2 {
+    text-align: center;
+    margin-top: 30px;
+  }
+
+  #searchBox {
+    display: block;
+    margin: 30px auto;
+    width: 60%;
+    max-width: 600px;
+    padding: 12px 16px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+
+  #status {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #555;
+  }
+
+  #results {
+    width: 80%;
+    max-width: 900px;
+    margin: 0 auto 40px auto;
+  }
+
+  .result {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+
+  .scid {
+    font-weight: bold;
+    word-break: break-all;
+    color: #0066cc;
+    cursor: pointer;
+  }
+
+  .scid:hover {
+    text-decoration: underline;
+  }
+
+  .url {
+    color: #444;
+    word-break: break-all;
+  }
+
+  .meta {
+    margin-top: 6px;
+    color: #444;
+  }
+</style>
 </head>
+
 <body>
-  <h1>Welcome to Tela Start Page</h1>
-  <p>Select a SCID or Node to get started, or create a new tab.</p>
 
-  <h2>SCID Bookmarks</h2>
-  <ul id="scidBookmarks"></ul>
+<h2>Search</h2>
 
-  <h2>Node Bookmarks</h2>
-  <ul id="nodeBookmarks"></ul>
+<input
+  id="searchBox"
+  type="text"
+  placeholder="Search SCID, dURL, name or description..."
+  disabled
+/>
 
-  <script>
-    // Use preload API if available
-    const api = window.startAPI || window.electronAPI;
+<div id="status">Fetching indexed SCIDs...</div>
+<div id="results"></div>
 
-    async function renderBookmarks() {
-      const scids = await api.loadSCIDBookmarks();
-      const nodes = await api.loadNodeBookmarks();
+<script>
+const apiBase = "http://127.0.0.1:8099/api";
 
-      const scidList = document.getElementById("scidBookmarks");
-      scidList.innerHTML = "";
-      scids.forEach(b => {
-        const li = document.createElement("li");
-        li.textContent = b.name + " (" + b.scid.slice(0,12) + "...)";
-        li.onclick = () => alert(`SCID clicked: ${b.scid}`);
-        scidList.appendChild(li);
-      });
+let allResults = [];
+let fuse;
 
-      const nodeList = document.getElementById("nodeBookmarks");
-      nodeList.innerHTML = "";
-      nodes.forEach(b => {
-        const li = document.createElement("li");
-        li.textContent = b.name + " (" + b.node + ")";
-        li.onclick = () => alert(`Node clicked: ${b.node}`);
-        nodeList.appendChild(li);
-      });
-    }
+// Fetch all indexed SCIDs
+async function fetchAllSCIDs() {
+  const resp = await fetch(`${apiBase}/indexedscs`);
+  if (!resp.ok) throw new Error("Failed to fetch indexed SCIDs");
+  const data = await resp.json();
+  return Object.keys(data.indexedscs || {});
+}
 
-    renderBookmarks();
-  </script>
+// Fetch SCID variables
+async function fetchSCIDData(scid) {
+  try {
+    const resp = await fetch(`${apiBase}/scvarsbyheight?scid=${scid}`);
+    if (!resp.ok) return null;
+
+    const data = await resp.json();
+    if (!data.variables) return null;
+
+    let dURL = "";
+    let nameHdr = "";
+    let descrHdr = "";
+
+    data.variables.forEach(v => {
+      if (v.Key === "dURL") dURL = v.Value;
+      if (v.Key === "nameHdr") nameHdr = v.Value;
+      if (v.Key === "descrHdr") descrHdr = v.Value;
+    });
+
+    if (!dURL) return null;
+
+    return { scid, dURL, nameHdr, descrHdr };
+  } catch {
+    return null;
+  }
+}
+
+// Render results
+function renderResults(results) {
+  const container = document.getElementById("results");
+  container.innerHTML = "";
+
+  results.forEach(r => {
+    const div = document.createElement("div");
+    div.className = "result";
+
+    div.innerHTML = `
+      <div class="scid" onclick="handleSCIDClick('${r.scid}')">
+        ${r.scid}
+      </div>
+      <div class="url">${r.dURL}</div>
+      <div class="meta">${r.nameHdr}</div>
+      <div class="meta">${r.descrHdr}</div>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+// CLICK HANDLER — this is the only integration point
+function handleSCIDClick(scid) {
+  if (!window.electronAPI?.selectSCID) {
+    console.warn("selectSCID not available");
+    return;
+  }
+
+  window.electronAPI.selectSCID(scid);
+}
+
+// Fuzzy filtering
+function filterResults(query) {
+  if (!query.trim()) {
+    renderResults(allResults);
+    return;
+  }
+
+  const results = fuse.search(query);
+  renderResults(results.map(r => r.item));
+}
+
+// Load everything once
+async function loadSCIDs() {
+  const status = document.getElementById("status");
+  const searchBox = document.getElementById("searchBox");
+
+  const scids = await fetchAllSCIDs();
+  status.textContent = `Scanning ${scids.length} SCIDs...`;
+
+  for (const scid of scids) {
+    const res = await fetchSCIDData(scid);
+    if (res) allResults.push(res);
+  }
+
+  status.textContent = `Loaded ${allResults.length} SCIDs with dURL`;
+  searchBox.disabled = false;
+
+  fuse = new Fuse(allResults, {
+    keys: [
+      { name: "scid", weight: 2 },
+      { name: "dURL", weight: 1.5 },
+      { name: "nameHdr", weight: 1 },
+      { name: "descrHdr", weight: 0.8 }
+    ],
+    threshold: 0.35,
+    ignoreLocation: true,
+    minMatchCharLength: 2
+  });
+
+  renderResults(allResults);
+}
+
+document.getElementById("searchBox").addEventListener("input", e => {
+  filterResults(e.target.value);
+});
+
+loadSCIDs();
+</script>
+
 </body>
 </html>
+

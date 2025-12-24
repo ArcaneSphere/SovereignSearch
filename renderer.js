@@ -18,6 +18,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const api = window.electronAPI;
 
+  // ---------- SCID selection from search / picker ----------
+  api.onSCIDSelected((scid) => {
+    scidInput.value = scid;
+    scidInput.focus();
+    scidInput.select();
+  });
+
   // ---------- State ----------
   let tabs = []; // { id, scid, node, serverId, title }
   let activeTabId = null;

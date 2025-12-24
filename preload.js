@@ -23,5 +23,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Events
   onTelaTabTitle: (cb) => ipcRenderer.on("tela:tab-title", (event, payload) => cb(payload)),
-  onBookmarksUpdated: (cb) => ipcRenderer.on("bookmarks-updated", () => cb())
+  onBookmarksUpdated: (cb) => ipcRenderer.on("bookmarks-updated", () => cb()),
+  
+  selectSCID: (scid) => ipcRenderer.send("scid:select", scid),
+  onSCIDSelected: (cb) => ipcRenderer.on("scid:select", (_, scid) => cb(scid))
 });

@@ -57,6 +57,13 @@ ipcMain.handle("node:delete", (e, node) => {
   return list;
 });
 
+// ---------------- Search -----------------
+ipcMain.on("scid:select", (event, scid) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("scid:select", scid);
+  }
+});
+
 // ---------------- Globals ----------------
 let mainWindow = null;
 const browserViews = new Map();  // tabId → BrowserView
