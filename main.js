@@ -64,6 +64,16 @@ ipcMain.on("scid:select", (event, scid) => {
   }
 });
 
+// ------ Managers --
+ipcMain.handle("browserviews:hide-all", () => {
+  if (!mainWindow) return;
+  for (const view of browserViews.values()) {
+    mainWindow.removeBrowserView(view);
+  }
+  activeTabId = null;
+});
+
+
 // ---------------- Globals ----------------
 let mainWindow = null;
 const browserViews = new Map();  // tabId → BrowserView

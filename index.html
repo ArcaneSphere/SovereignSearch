@@ -47,6 +47,10 @@
 
     <!-- ===== SIDEBAR (Bookmarks) ===== -->
     <aside id="sidebar" class="collapsed">
+      <h3>Managers</h3>
+        <button data-manager="settings">Settings</button>
+        <button data-manager="gnomon">Gnomon</button>
+        <button data-manager="webtorrent">WebTorrent</button>
 
       <h3>Node Bookmarks</h3>
       <div id="sidebarNodeList"></div>
@@ -57,7 +61,9 @@
     </aside>
 
     <!-- ===== BrowserView lives here ===== -->
-    <div id="browserArea"></div>
+    <div id="browserArea">
+      <div id="managerRoot"></div>
+    </div>
 
   </div>
 
@@ -65,6 +71,7 @@
 
 
 
-<script src="renderer.js" defer></script>
+<script type="module" src="./renderer.js"></script>
+
 </body>
 </html>

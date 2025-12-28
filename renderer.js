@@ -1,3 +1,6 @@
+
+import { showManager, hideManagers } from "./managers/router.js";
+
 // renderer.js
 document.addEventListener("DOMContentLoaded", () => {
   // ---------- DOM references ----------
@@ -17,6 +20,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const sidebarToggleBtn = document.getElementById("sidebarToggleBtn");
 
   const api = window.electronAPI;
+
+  document.querySelectorAll("[data-manager]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const managerId = btn.dataset.manager;
+
+    // Show manager UI (renderer only)
+    showManager(managerId);
+  });
+});
 
   // ---------- SCID selection from search / picker ----------
   api.onSCIDSelected((scid) => {
@@ -131,6 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function activateTab(id) {
     activeTabId = id;
     renderTabs();
+    hideManagers();
     const tab = tabs.find(t => t.id === id);
     if (!tab) return;
 
@@ -154,30 +167,28 @@ document.addEventListener("DOMContentLoaded", () => {
     } else renderTabs();
   }
 
-  function createBlankTab() {
-    const id = crypto.randomUUID();
-    const tab = { id, scid: null, node: null, serverId: null, title: "Start Page" };
-    tabs.push(tab);
-    activateTab(id);
-
-    // Ask main process to create Start Page BrowserView
-    window.electronAPI.createStartPageTab(id);
-
-    return tab;
-  }
-
   async function createBlankTab() {
     const id = crypto.randomUUID();
-    const tab = { id, scid: null, node: null, serverId: null, title: "Start Page" };
-    tabs.push(tab);
-    activateTab(id);
+    const tab = {
+      id,
+      scid: null,
+      node: null,
+      serverId: null,
+      title: "Start Page"
+    };
 
-    // Request main process to create blank BrowserView
-    const { id: serverId } = await api.startTela(null, null, { isStartPage: true, tabId: id });
+    tabs.push(tab);
+    activeTabId = id;
+    renderTabs();
+    hideManagers();
+
+    const { id: serverId } = await api.startTela(null, null);
     tab.serverId = serverId;
 
+    window.electronAPI.switchToTab(serverId);
     return tab;
   }
+
 
   async function createTabWithSCID(node, scid) {
     const id = crypto.randomUUID();

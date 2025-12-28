@@ -1,17 +1,61 @@
-/* ---------- Variables ---------- */
+/* =========================================================
+   THEME VARIABLES
+   ========================================================= */
+
 :root {
+  /* Layout */
   --topbar-height: 54px;
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 0;
+
+  /* Light theme default */
+  --bg-app: #f5f5f5;
+  --bg-panel: #ffffff;
+  --bg-topbar: #f0f0f0;
+  --bg-sidebar: #f8f8f8;
+  --bg-hover: #eaeaea;
+
+  --text-primary: #111111;
+  --text-secondary: #555555;
+
+  --border-color: #cccccc;
+  --shadow-soft: 0 1px 4px rgba(0,0,0,0.12);
+
+  --scrollbar-thumb: #cccccc;
+  --accent: #4285f4;
 }
 
-/* ---------- Global ---------- */
+/* Dark mode system default */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-app: #0e0e0e;
+    --bg-panel: #141414;
+    --bg-topbar: #1a1a1a;
+    --bg-sidebar: #111111;
+    --bg-hover: #222222;
+
+    --text-primary: #ffffff;
+    --text-secondary: #aaaaaa;
+
+    --border-color: #333333;
+    --shadow-soft: 0 1px 4px rgba(0,0,0,0.6);
+
+    --scrollbar-thumb: #444444;
+    --accent: #007acc;
+  }
+}
+
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
 html, body {
   height: 100%;
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
   overflow: hidden;
-  background: #f5f5f5;
+  background: var(--bg-app);
+  color: var(--text-primary);
 }
 
 #app {
@@ -20,13 +64,33 @@ html, body {
   flex-direction: column;
 }
 
-/* ---------- Top Bar ---------- */
+.hidden {
+  display: none;
+}
+
+/* =========================================================
+   MANAGER PAGE
+   ========================================================= */
+
+.manager-page {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  overflow: auto;
+  z-index: 10;
+}
+
+/* =========================================================
+   TOP BAR
+   ========================================================= */
+
 #topBar {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 6px;
-  background: #f0f0f0;
+  background: var(--bg-topbar);
   box-sizing: border-box;
   z-index: 10;
   flex-shrink: 0;
@@ -38,9 +102,10 @@ html, body {
   gap: 10px;
 }
 
+/* =========================================================
+   TABS
+   ========================================================= */
 
-
-/* ---------- Tabs ---------- */
 #tabBar {
   display: flex;
   align-items: center;
@@ -62,17 +127,17 @@ html, body {
   white-space: nowrap;
   height: 30px;
   padding: 0 10px;
-  border-bottom: 1px solid #ccc;
-  align-items: center;       /* center text vertically */
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
   scrollbar-width: thin;
 }
 
 #tabsContainer::-webkit-scrollbar {
-  height: 8px;              /* Thin scrollbar */
+  height: 8px;
 }
 
 #tabsContainer::-webkit-scrollbar-thumb {
-  background: #ccc;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
@@ -86,43 +151,49 @@ html, body {
   max-width: 200px;
   padding: 5px 8px;
   cursor: pointer;
-  font-family: Arial, Helvetica, sans-serif;
   font-size: 14px;
 }
 
 .tab-title {
   display: inline-block;
-  max-width: 140px;         /* Room for close button */
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .tab.active {
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-soft);
 }
+
 .tab .close {
   background: transparent;
   border: none;
   cursor: pointer;
+  color: var(--text-secondary);
 }
 
-/* ---------- Input Groups ---------- */
+/* =========================================================
+   INPUT GROUPS
+   ========================================================= */
+
 .input-group {
   position: relative;
   display: flex;
   align-items: center;
-  z-index: 20; /* ensures inputs above BrowserView */
+  z-index: 20;
 }
 
 .input-group input {
   width: 330px;
   padding: 5px 35px 5px 5px;
   font-size: 14px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
-/* save / dropdown buttons */
 .save-btn {
   position: absolute;
   right: 6px;
@@ -132,54 +203,248 @@ html, body {
   border: none;
   cursor: pointer;
   z-index: 21;
+  color: var(--text-secondary);
 }
 
-/* ---------- Bookmark ---------- */
+/* =========================================================
+   BOOKMARKS
+   ========================================================= */
+
 .bookmark-item {
   padding: 6px 10px;
   display: flex;
   justify-content: space-between;
   cursor: pointer;
+  color: var(--text-primary);
 }
-.bookmark-item:hover { background: #eee; }
-.bookmark-delete { color: red; border: none; background: none; cursor: pointer; }
 
-/* ---------- Main Area ---------- */
+.bookmark-item:hover {
+  background: var(--bg-hover);
+}
+
+.bookmark-delete {
+  color: red;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* =========================================================
+   MAIN AREA
+   ========================================================= */
+
 #mainArea {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
-/* Sidebar */
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
 #sidebar {
   width: var(--sidebar-width);
-  background: #111;
-  color: #fff;
-  border-right: 1px solid #333;
+  background: var(--bg-sidebar);
+  color: var(--text-primary);
+  border-right: 1px solid var(--border-color);
   overflow-y: auto;
   transition: width 0.2s ease;
   flex-shrink: 0;
   padding: 10px;
 }
+
 #sidebar.collapsed {
   width: var(--sidebar-collapsed-width);
   padding: 0;
 }
 
-/* Bookmark lists inside sidebar */
 #nodeBookmarkList,
 #scidBookmarkList {
   margin-top: 4px;
 }
-.bookmark-item {
-  color: #fff;
-}
-.bookmark-item:hover { background: #222; }
 
-/* BrowserView container */
+/* =========================================================
+   BROWSER AREA
+   ========================================================= */
+
 #browserArea {
   flex: 1;
   position: relative;
-  background: #fff;
+  background: var(--bg-panel);
+}
+
+/* =========================================================
+   SEARCH PAGE
+   ========================================================= */
+
+#searchPage {
+  font-family: Arial, Helvetica, sans-serif;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 20px 20px 40px;
+  box-sizing: border-box;
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+#searchPage h2 {
+  text-align: center;
+  margin-top: 30px;
+  font-weight: normal;
+  color: var(--text-primary);
+}
+
+#searchBox {
+  display: block;
+  margin: 30px auto;
+  width: 60%;
+  max-width: 600px;
+  padding: 12px 16px;
+  font-size: 16px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  outline: none;
+}
+
+#searchBox:focus {
+  border-color: var(--accent);
+}
+
+#status {
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+#results {
+  width: 80%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.result {
+  padding: 8px 0 20px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.url {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.nameHdr {
+  font-size: 20px;
+  line-height: 1.3;
+  margin-bottom: 4px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.nameHdr:hover {
+  text-decoration: underline;
+}
+
+.scid {
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  word-break: break-all;
+  margin-bottom: 4px;
+}
+
+.scid:hover {
+  text-decoration: underline;
+}
+
+.descr {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-width: 90%;
+}
+
+/* =========================================================
+   SETTINGS MANAGER
+   ========================================================= */
+
+.settings-manager {
+  padding: 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-manager h2 {
+  margin-bottom: 20px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+}
+
+.theme-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.theme-toggle button {
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.theme-toggle button:hover {
+  background: var(--bg-hover);
+}
+
+/* =========================================================
+   MANUAL THEME OVERRIDES (for toggle)
+   ========================================================= */
+
+/* Light mode */
+:root[data-theme="light"] {
+  --bg-app: #f5f5f5;
+  --bg-panel: #ffffff;
+  --bg-topbar: #f0f0f0;
+  --bg-sidebar: #f8f8f8;
+  --text-primary: #111111;
+  --text-secondary: #555555;
+  --border-color: #cccccc;
+  --shadow-soft: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+/* Dark mode */
+:root[data-theme="dark"] {
+  --bg-app: #0e0e0e;
+  --bg-panel: #141414;
+  --bg-topbar: #1a1a1a;
+  --bg-sidebar: #111111;
+  --text-primary: #ffffff;
+  --text-secondary: #aaaaaa;
+  --border-color: #333333;
+  --shadow-soft: 0 1px 4px rgba(0,0,0,0.6);
+}
+
+/* System mode inherits prefers-color-scheme media query */
+:root[data-theme="system"] {
+  /* no extra CSS needed */
 }

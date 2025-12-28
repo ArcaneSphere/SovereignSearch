@@ -26,5 +26,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onBookmarksUpdated: (cb) => ipcRenderer.on("bookmarks-updated", () => cb()),
   
   selectSCID: (scid) => ipcRenderer.send("scid:select", scid),
-  onSCIDSelected: (cb) => ipcRenderer.on("scid:select", (_, scid) => cb(scid))
+  onSCIDSelected: (cb) => ipcRenderer.on("scid:select", (_, scid) => cb(scid)),
+
+  hideAllBrowserViews: () => ipcRenderer.invoke("browserviews:hide-all")
+
 });
