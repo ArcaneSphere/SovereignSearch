@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveSCIDBtn = document.getElementById("saveSCIDBookmarkButton");
   const loadTelaBtn = document.getElementById("loadTelaButton");
 
+  const applyNodeBtn = document.getElementById("applyNodeButton");
+
   const newTabBtn = document.getElementById("newTabBtn");
   const tabsContainer = document.getElementById("tabsContainer");
 
@@ -253,6 +255,25 @@ document.addEventListener("DOMContentLoaded", () => {
       await createTabWithSCID(node, scid);
     }
   };
+  // -------------------------------------------------------
+  applyNodeBtn.onclick = async () => {
+  const node = nodeInput.value.trim();
+  if (!node) {
+    alert("Enter a node address");
+    return;
+  }
+
+  const res = await window.electronAPI.applyGnomonNode(node);
+
+  if (!res.ok) {
+    alert(res.error || "Failed to apply node");
+    return;
+  }
+
+  alert(`Gnomon node set to ${res.node}`);
+  };
+
+  // ------------------------------------------------------
 
   newTabBtn.onclick = () => createBlankTab();
 

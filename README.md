@@ -59,8 +59,15 @@ npm start
 
 ### Core
 - [ ] Only index.html pages will load (most dApps are good), considering a solution to this, but yeah many options...
+
+### Input (NODE)
 - [ ] Human-readable domain names for nodes
-- [ ] Rethink node settings
+- [x] "Apply Node" updates Gnomon --daemon-rpc-address=<127.0.0.1:10102>
+- [ ] Show last set/saved node address
+- [ ] Gnomon restart on Apply (for now start manually)
+
+### Input (SCID)
+- [ ] Special characters in the SCID and Node entry won't bookmark, no need for but yeah UX
 
 ### Tabs
 - [ ] Live tab title updates when not resolved
@@ -90,7 +97,7 @@ npm start
 
 ### User experience
 - [ ] Sidebar collapse when pointer leaves, closes onClick somewhere outside sidebar
-- [ ] Special characters in the SCID and Node entry won't bookmark, no need for but yeah UX
+- [ ] Readme
 - [ ] Not all dApps align good in the browserview, it works but need perfection
 - [ ] With really big dApps there isn't a instant page view (I mean more than 3/4 sec) UX solution is showing what is going on in the background or an animation.
 - [ ] Consistent interface

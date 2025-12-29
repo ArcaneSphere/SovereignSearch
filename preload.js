@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   checkGnomon: () => ipcRenderer.invoke("check-gnomon"),
   getGnomonInfo: () => ipcRenderer.invoke("gnomon:get-info"),
 
+  applyGnomonNode: (node) => ipcRenderer.invoke("gnomon:apply-node", node),
+
   gnomonStart: () => ipcRenderer.invoke("gnomon:start"),
   gnomonStop: () => ipcRenderer.invoke("gnomon:stop"),
 

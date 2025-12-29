@@ -8,6 +8,7 @@ const http = require("http"); // -- Gnomon
 
 const { spawn } = require("child_process");
 
+const gnomonConfigFile = path.join(app.getPath("userData"), "gnomonConfig.json");
 
 
 
@@ -32,6 +33,39 @@ function saveJSON(file, data) {
     console.error("Save JSON error:", err);
   }
 }
+
+
+// -------------- Save Gnomon node to JSON -------------
+function loadGnomonConfig() {
+  try {
+    if (!fs.existsSync(gnomonConfigFile)) {
+      fs.writeFileSync(
+        gnomonConfigFile,
+        JSON.stringify({ node: "192.168.1.154:10102" }, null, 2),
+        "utf8"
+      );
+    }
+    return JSON.parse(fs.readFileSync(gnomonConfigFile, "utf8"));
+  } catch (err) {
+    console.error("Load Gnomon config error:", err);
+    return { node: "192.168.1.154:10102" };
+  }
+}
+
+function saveGnomonConfig(node) {
+  try {
+    fs.writeFileSync(
+      gnomonConfigFile,
+      JSON.stringify({ node }, null, 2),
+      "utf8"
+    );
+  } catch (err) {
+    console.error("Save Gnomon config error:", err);
+  }
+}
+
+let gnomonNodeAddress = loadGnomonConfig().node;
+
 
 // ---------------- Gnomon ----------------
 
@@ -92,7 +126,7 @@ ipcMain.handle("gnomon:start", async () => {
   const gnomonPath = path.join(__dirname, "resources", "gnomonindexer");
 
   gnomonProcess = spawn(gnomonPath, [
-    "--daemon-rpc-address=192.168.1.154:10102",
+    `--daemon-rpc-address=${gnomonNodeAddress}`,
     "--fastsync",
     "--num-parallel-blocks=5",
     "--api-address=127.0.0.1:8099",
@@ -146,6 +180,23 @@ ipcMain.handle("gnomon:stop", async () => {
   }
 
   return { stopped: true };
+});
+
+// ---------- IPC to apply the node address to Gnomon -------------------
+ipcMain.handle("gnomon:apply-node", async (event, nodeAddress) => {
+  if (!nodeAddress || typeof nodeAddress !== "string") {
+    return { ok: false, error: "Invalid node address" };
+  }
+
+  gnomonNodeAddress = nodeAddress.trim();
+  saveGnomonConfig(gnomonNodeAddress);
+
+  // Optional: restart if running
+  if (gnomonProcess) {
+    await stopGnomonAndWait();
+  }
+
+  return { ok: true, node: gnomonNodeAddress };
 });
 
 // ---------------- Bookmark IPC ----------------
