@@ -38,7 +38,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   onGnomonLog: (callback) => ipcRenderer.on("gnomon-log", (_, log) => callback(log)),
   onGnomonExit: (callback) => ipcRenderer.on("gnomon-exit", (_, data) => callback(data)),
-  
 
   hideAllBrowserViews: () => ipcRenderer.invoke("browserviews:hide-all")
 
