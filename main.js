@@ -13,7 +13,7 @@ const { spawn } = require("child_process");
 
 const gnomonConfigFile = path.join(app.getPath("userData"), "gnomonConfig.json");
 
-// ------------Opem http(s) in standard browser ---------------
+// ------------Open http(s) in standard browser ---------------
 
 app.on("web-contents-created", (_, contents) => {
 
@@ -381,6 +381,7 @@ function hideModalOverlay() {
   currentModalView = null;
 }
 
+// ---------------- TELA START ------------------
 // ---------------- Tabs / SCIDs ----------------
 ipcMain.handle("tela:start", async (event, { node, scid }) => {
   try {
@@ -420,9 +421,24 @@ ipcMain.handle("tela:start", async (event, { node, scid }) => {
       return { id: tabId };
     }
 
-    const res = await fetch(`http://127.0.0.1:4040/add/${scid}?node=${encodeURIComponent(node)}`);
-    if (!res.ok) throw new Error(`Tela registration failed: ${res.status}`);
+    // ---------------- Register SCID ----------------
+const addRes = await fetch(`http://127.0.0.1:4040/add/${scid}?node=${encodeURIComponent(node)}`);
+if (!addRes.ok) throw new Error(`Failed to add SCID ${scid}`);
 
+const text = await addRes.text();
+
+// Handle both cases: new SCID vs already loaded
+let scidURL;
+if (text.startsWith("OK: ")) {
+    scidURL = text.slice(4).trim();
+} else if (text.startsWith("OK (already loaded): ")) {
+    scidURL = text.slice("OK (already loaded): ".length).trim();
+} else {
+    throw new Error("Invalid SCID URL returned by TELA server");
+}
+
+
+    // ---------------- Create new tab ----------------
     const tabId = `tab-${Date.now()}`;
     activeScids.set(scid, tabId);
 
@@ -438,8 +454,8 @@ ipcMain.handle("tela:start", async (event, { node, scid }) => {
 
     browserViews.set(tabId, view);
 
-    const url = `http://localhost:4040/tela/${scid}/`;
-    await view.webContents.loadURL(url);
+    // ---------------- Load the SCID ----------------
+    await view.webContents.loadURL(encodeURI(scidURL));
 
         setTimeout(() => {
       if (!mainWindow || !browserViews.has(tabId)) return;

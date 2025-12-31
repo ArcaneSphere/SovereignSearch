@@ -46,11 +46,15 @@ http.HandleFunc("/add/", func(w http.ResponseWriter, r *http.Request) {
     _, alreadyLoaded := proxies[scid]
     mu.RUnlock()
 
-    if alreadyLoaded {
-        log.Printf("SCID %s already registered — idempotent OK", scid[:8])
-        fmt.Fprintf(w, "OK (already loaded): %s", scid)
-        return
-    }
+   if alreadyLoaded {
+    mu.RLock()
+    base := baseURLs[scid]
+    mu.RUnlock()
+
+    log.Printf("SCID %s already registered — returning existing URL", scid[:8])
+    fmt.Fprintf(w, "OK: %s", base)
+    return
+}
 
     var rawURL string
     folderPath := filepath.Join(*scidRoot, scid)
@@ -89,7 +93,7 @@ http.HandleFunc("/add/", func(w http.ResponseWriter, r *http.Request) {
     baseURLs[scid] = base
     mu.Unlock()
 
-    fmt.Fprintf(w, "OK: %s", scid)
+    fmt.Fprintf(w, "OK: %s", rawURL)
 })
 
 
