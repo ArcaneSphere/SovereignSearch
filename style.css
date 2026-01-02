@@ -358,9 +358,24 @@ html, body {
 }
 
 .result {
-  padding: 8px 0 20px 0;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #ccc;
+  padding: 8px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
+
+.result .icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.result .content {
+  flex: 1;
+}
+
 
 .url {
   font-size: 14px;
@@ -399,6 +414,48 @@ html, body {
   color: var(--text-secondary);
   max-width: 90%;
 }
+
+  .filters {
+    margin: 10px 0 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .filters label {
+    font-size: 0.9em;
+    opacity: 0.8;
+  }
+
+  .icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .content { flex: 1; }
+
+  .rating {
+    margin-top: 6px;
+    font-size: 0.9em;
+    opacity: 0.85;
+  }
+
+    .icon-slot {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  .icon-slot .icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: block;
+  }
+
 
 /* =========================================================
    SETTINGS MANAGER

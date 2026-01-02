@@ -9,19 +9,15 @@
 <script>
   const savedTheme = localStorage.getItem('appTheme') || 'system';
   document.documentElement.dataset.theme = savedTheme;
-</script>
-
-<script>
-  window.addEventListener('storage', (e) => {
+  window.addEventListener('storage', e => {
     if (e.key === 'appTheme') {
       document.documentElement.dataset.theme = e.newValue || 'system';
     }
   });
 </script>
 
-
-<!-- Use merged app CSS -->
 <link rel="stylesheet" href="style.css">
+
 
 </head>
 
@@ -29,7 +25,7 @@
 
 <div id="searchPage">
 
-  <h2>Search</h2>
+  <h2>SovereignSearch</h2>
 
   <input
     id="searchBox"
@@ -37,6 +33,20 @@
     placeholder="Search SCID, dURL, name or description..."
     disabled
   />
+
+  <div class="filters">
+    <label>Min rating:</label>
+    <input id="minRating" type="range" min="0" max="99" step="1" value="0">
+    <span id="minRatingVal">0</span>
+
+    <label>Sort:</label>
+    <select id="sortMode">
+      <option value="name_asc">Name A → Z</option>
+      <option value="name_desc">Name Z → A</option>
+      <option value="newest">Newest SCID</option>
+      <option value="oldest">Oldest SCID</option>
+    </select>
+  </div>
 
   <div id="status">Fetching indexed SCIDs...</div>
   <div id="results"></div>
@@ -48,148 +58,195 @@ const apiBase = "http://127.0.0.1:8099/api";
 
 let allResults = [];
 let fuse;
-const loadedSCIDs = new Set();
+let minRating = 0;
 
-// Fetch all indexed SCIDs
-async function fetchAllSCIDs() {
-  const resp = await fetch(`${apiBase}/indexedscs`);
-  if (!resp.ok) throw new Error("Failed to fetch indexed SCIDs");
-  const data = await resp.json();
-  return Object.keys(data.indexedscs || {});
-}
-
-// Fetch SCID variables
+/* -----------------------------
+   FETCH SCID DATA
+----------------------------- */
 async function fetchSCIDData(scid) {
   try {
     const resp = await fetch(`${apiBase}/scvarsbyheight?scid=${scid}`);
     if (!resp.ok) return null;
-
     const data = await resp.json();
     if (!data.variables) return null;
 
-    let dURL = "";
-    let nameHdr = "";
+    let dURL = scid;
+    let nameHdr = scid;
     let descrHdr = "";
+    let iconURL = "";
+    let createdHeight = Infinity;
+    const ratings = [];
 
     data.variables.forEach(v => {
-      if (v.Key === "dURL") dURL = v.Value;
-      if (v.Key === "nameHdr") nameHdr = v.Value;
-      if (v.Key === "descrHdr") descrHdr = v.Value;
+      const key = v.Key;
+      const val = v.Value;
+
+      if (key === "dURL" && val) dURL = val;
+      else if (key === "nameHdr" && val) nameHdr = val;
+      else if (key === "descrHdr" && val) descrHdr = val;
+      else if (key === "iconURLHdr" && val) iconURL = val;
+      else if (typeof key === "string" && key.startsWith("dero1")) {
+        const [rating, height] = String(val).split("_");
+        const h = Number(height);
+        ratings.push({ rating: Number(rating), height: h });
+        if (h < createdHeight) createdHeight = h;
+      }
     });
 
-    if (!dURL) return null;
+    const likes = ratings.filter(r => r.rating >= 50).length;
+    const dislikes = ratings.filter(r => r.rating < 50).length;
+    const average = ratings.length
+      ? Math.round(ratings.reduce((a, r) => a + r.rating, 0) / ratings.length)
+      : 0;
 
-    return { scid, dURL, nameHdr, descrHdr };
-  } catch {
+    return {
+      scid,
+      dURL,
+      nameHdr,
+      descrHdr,
+      iconURL,
+      likes,
+      dislikes,
+      average,
+      createdHeight: createdHeight === Infinity ? 0 : createdHeight
+    };
+  } catch (err) {
+    console.error("SCID fetch error", err);
     return null;
   }
 }
 
-// Render results
+/* -----------------------------
+   FETCH INDEXED SCIDS
+----------------------------- */
+async function fetchAllSCIDs() {
+  const resp = await fetch(`${apiBase}/indexedscs`);
+  if (!resp.ok) throw new Error("Indexed SCID fetch failed");
+  const data = await resp.json();
+  return Object.keys(data.indexedscs || {});
+}
+
+/* -----------------------------
+   SORTING
+----------------------------- */
+function sortResults(list, mode) {
+  const arr = [...list];
+  switch (mode) {
+    case "name_asc":
+      return arr.sort((a, b) =>
+        a.nameHdr.localeCompare(b.nameHdr, undefined, { sensitivity: "base" })
+      );
+    case "name_desc":
+      return arr.sort((a, b) =>
+        b.nameHdr.localeCompare(a.nameHdr, undefined, { sensitivity: "base" })
+      );
+    case "newest":
+      return arr.sort((a, b) => b.createdHeight - a.createdHeight);
+    case "oldest":
+      return arr.sort((a, b) => a.createdHeight - b.createdHeight);
+    default:
+      return arr;
+  }
+}
+
+
+/* -----------------------------
+   RENDER RESULTS
+----------------------------- */
 function renderResults(results) {
   const container = document.getElementById("results");
   container.innerHTML = "";
 
-  results.forEach(r => {
-    const div = document.createElement("div");
-    div.className = "result";
+  const mode = document.getElementById("sortMode").value;
+  results = sortResults(results, mode);
 
-    div.innerHTML = `
-      <div class="url">${r.dURL}</div>
-
-      <div class="nameHdr" onclick="handleSCIDClick('${r.scid}')" style="cursor:pointer;">
-      ${r.nameHdr}
-      </div>
-
-      <div class="scid" onclick="handleSCIDClick('${r.scid}')">
-        ${r.scid}
-      </div>
-
-      <div class="descr">${r.descrHdr}</div>
-    `;
-
-    container.appendChild(div);
-  });
+  results
+    .filter(r => r.average >= minRating)
+    .forEach(r => {
+      const div = document.createElement("div");
+      div.className = "result";
+      const iconHTML = `
+        <div class="icon-slot">
+          ${r.iconURL ? `<img class="icon" src="${r.iconURL}" alt="">` : ''}
+        </div>
+      `;
+      div.innerHTML = `
+        ${iconHTML}
+        <div class="content">
+          <div class="url">${r.dURL}</div>
+          <div class="nameHdr" onclick="handleSCIDClick('${r.scid}')">${r.nameHdr}</div>
+          <div class="scid" onclick="handleSCIDClick('${r.scid}')">${r.scid}</div>
+          <div class="descr">${r.descrHdr}</div>
+          <div class="rating">👍 ${r.likes} 👎 ${r.dislikes} ⭐ ${r.average}</div>
+        </div>
+      `;
+      container.appendChild(div);
+    });
 }
 
-// CLICK HANDLER — this is the only integration point
+/* -----------------------------
+   EVENTS
+----------------------------- */
 function handleSCIDClick(scid) {
-  if (!window.electronAPI?.selectSCID) {
-    console.warn("selectSCID not available");
-    return;
-  }
-
+  if (!window.electronAPI?.selectSCID) return;
   window.electronAPI.selectSCID(scid);
 }
 
-// Fuzzy filtering
 function filterResults(query) {
-  if (!query.trim()) {
-    renderResults(allResults);
-    return;
-  }
-
-  const results = fuse.search(query);
-  renderResults(results.map(r => r.item));
+  if (!query.trim()) return renderResults(allResults);
+  renderResults(fuse.search(query).map(r => r.item));
 }
 
-// Load everything once
-async function loadSCIDs() {
+document.getElementById("searchBox").addEventListener("input", e => filterResults(e.target.value));
+
+document.getElementById("minRating").addEventListener("input", e => {
+  minRating = Number(e.target.value);
+  document.getElementById("minRatingVal").textContent = minRating;
+  renderResults(allResults);
+});
+
+document.getElementById("sortMode").addEventListener("change", () => {
+  renderResults(allResults);
+});
+
+/* -----------------------------
+   BOOTSTRAP
+----------------------------- */
+(async () => {
   const status = document.getElementById("status");
   const searchBox = document.getElementById("searchBox");
 
-  const scids = await fetchAllSCIDs();
-  status.textContent = `Scanning ${scids.length} SCIDs...`;
+  try {
+    const scids = await fetchAllSCIDs();
+    let index = 0;
+    const concurrency = 5;
 
-  for (const scid of scids) {
-    const res = await fetchSCIDData(scid);
-    if (res) allResults.push(res);
-  }
+    async function worker() {
+      while (index < scids.length) {
+        const scid = scids[index++];
+        const res = await fetchSCIDData(scid);
+        if (res) allResults.push(res);
+        status.textContent = `Loaded ${allResults.length} / ${scids.length} SCIDs...`;
+      }
+    }
 
-  status.textContent = `Loaded ${allResults.length} SCIDs with dURL`;
-  searchBox.disabled = false;
+    await Promise.all(Array(concurrency).fill().map(worker));
 
-  fuse = new Fuse(allResults, {
-    keys: [
-      { name: "scid", weight: 2 },
-      { name: "dURL", weight: 1.5 },
-      { name: "nameHdr", weight: 1 },
-      { name: "descrHdr", weight: 0.8 }
-    ],
-    threshold: 0.25,
-    ignoreLocation: true,
-    minMatchCharLength: 2
-  });
+    fuse = new Fuse(allResults, {
+      keys: ["scid", "dURL", "nameHdr", "descrHdr", "average"],
+      threshold: 0.25,
+      ignoreLocation: true
+    });
 
-  renderResults(allResults);
-}
-
-document.getElementById("searchBox").addEventListener("input", e => {
-  filterResults(e.target.value);
-});
-
-// Live update handler
-if (window.electronAPI?.onGnomonLog) {
-  window.electronAPI.onGnomonLog(async (line) => {
-    const match = line.match(/scid:\s*([a-z0-9]+)/i);
-    if (!match) return;
-
-    const scid = match[1];
-    if (loadedSCIDs.has(scid)) return;
-    loadedSCIDs.add(scid);
-
-    const res = await fetchSCIDData(scid);
-    if (!res) return;
-
-    allResults.push(res);
-    fuse.setCollection(allResults);
+    status.textContent = `✅ Loaded ${allResults.length} SCIDs`;
+    searchBox.disabled = false;
     renderResults(allResults);
-    document.getElementById("status").textContent = `Loaded ${allResults.length} SCIDs (live update)`;
-  });
-}
 
-loadSCIDs();
-
+  } catch (err) {
+    console.error(err);
+    status.textContent = "❌ Failed loading SCIDs, turn the Gnomon indexer on..";
+  }
+})();
 </script>
 
 </body>

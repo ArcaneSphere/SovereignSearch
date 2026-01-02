@@ -1,4 +1,7 @@
 let gnomonProcess = null;
+let gnomonLogBuffer = [];
+const MAX_GNOMON_LOG_LINES = 5000;
+
 let telaServerProcess = null;
 
 
@@ -111,7 +114,26 @@ let gnomonNodeAddress = loadGnomonConfig().node;
 
 // ---------------- Gnomon ----------------
 
-/* ---- Gnomon status check ---- */
+/* ---------- Log buffer helper ---------- */
+function pushGnomonLog(str) {
+  if (!str) return;
+
+  gnomonLogBuffer.push(str);
+
+  // Prevent memory bloat
+  if (gnomonLogBuffer.length > MAX_GNOMON_LOG_LINES) {
+    gnomonLogBuffer.splice(
+      0,
+      gnomonLogBuffer.length - MAX_GNOMON_LOG_LINES
+    );
+  }
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("gnomon-log", str);
+  }
+}
+
+/* ---------- IPC: status check ---------- */
 ipcMain.handle("check-gnomon", () => {
   return new Promise((resolve) => {
     const req = http.get(
@@ -131,41 +153,20 @@ ipcMain.handle("check-gnomon", () => {
   });
 });
 
-
-/* ---- Gnomon getInfo ---- */
-ipcMain.handle("gnomon:get-info", async () => {
-  return new Promise((resolve) => {
-    const req = http.get(
-      "http://127.0.0.1:8099/api/getinfo",
-      { timeout: 1500 },
-      (res) => {
-        let data = "";
-
-        res.on("data", chunk => data += chunk);
-        res.on("end", () => {
-          try {
-            resolve(JSON.parse(data));
-          } catch {
-            resolve(null);
-          }
-        });
-      }
-    );
-
-    req.on("error", () => resolve(null));
-    req.on("timeout", () => {
-      req.destroy();
-      resolve(null);
-    });
-  });
+/* ---------- IPC: get log buffer ---------- */
+ipcMain.handle("gnomon:get-log-buffer", () => {
+  // Send only last N lines
+  const slice = gnomonLogBuffer.slice(-500);
+  return slice.join("");
 });
 
-// -------------------- Gnomon Start/Stop ---------------------------------
-
+/* ---------- IPC: start Gnomon ---------- */
 ipcMain.handle("gnomon:start", async () => {
   if (gnomonProcess) return { running: true };
 
   const gnomonPath = path.join(__dirname, "resources", "gnomonindexer");
+
+  gnomonLogBuffer.push("\n--- Gnomon starting ---\n");
 
   gnomonProcess = spawn(gnomonPath, [
     `--daemon-rpc-address=${gnomonNodeAddress}`,
@@ -175,55 +176,49 @@ ipcMain.handle("gnomon:start", async () => {
     '--search-filter="telaVersion"'
   ]);
 
-  // Send live stdout logs to renderer
-  gnomonProcess.stdout.on('data', (data) => {
+  gnomonProcess.stdout.on("data", (data) => {
     const str = data.toString();
-    mainWindow.webContents.send('gnomon-log', str);
+    pushGnomonLog(str);
 
-    // 🔹 Detect new SCID indexed lines (adjust regex to your output)
+    // Detect indexed SCIDs
     const match = str.match(/Indexed SCID:\s+([a-z0-9]+)/i);
-    if (match) {
-      const scid = match[1];
-      mainWindow.webContents.send('gnomon-new-scid', scid);
+    if (match && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("gnomon-new-scid", match[1]);
     }
   });
 
-  // Send live stderr logs to renderer
   gnomonProcess.stderr.on("data", (data) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send("gnomon-log", data.toString());
-    }
+    pushGnomonLog(data.toString());
   });
 
-  // Handle process exit
-  gnomonProcess.on("exit", (code) => {
+  gnomonProcess.once("exit", (code) => {
+    pushGnomonLog(`\n--- Gnomon exited (code ${code}) ---\n`);
     gnomonProcess = null;
+
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send("gnomon-exit", { code });
     }
   });
 
-   // 🔹 Notify the renderer (start.html) that Gnomon started
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('gnomon-started');
+    mainWindow.webContents.send("gnomon-started");
   }
 
   return { started: true };
 });
 
+/* ---------- IPC: stop Gnomon ---------- */
 ipcMain.handle("gnomon:stop", async () => {
   if (!gnomonProcess) return { running: false };
 
+  pushGnomonLog("\n--- Stopping Gnomon ---\n");
+
   gnomonProcess.kill("SIGINT");
-  gnomonProcess = null;
 
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("gnomon-exit", { code: null });
-  }
-
-  return { stopped: true };
+  return { stopping: true };
 });
 
+  
 // ---------- IPC to apply the node address to Gnomon -------------------
 ipcMain.handle("gnomon:apply-node", async (event, nodeAddress) => {
   if (!nodeAddress || typeof nodeAddress !== "string") {

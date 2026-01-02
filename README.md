@@ -78,7 +78,7 @@ npm start
 - [x] Start/Stop Gnomon
 - [ ] Startpage refresh on Gnomon start
 - [ ] Display getInfo
-- [ ] Saved Live Logs on page change/refresh
+- [x] Keeping the log listener alive
 
 ### Readme Page
 - [ ] How to run you own node Guide
