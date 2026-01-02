@@ -36,6 +36,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   gnomonStart: () => ipcRenderer.invoke("gnomon:start"),
   gnomonStop: () => ipcRenderer.invoke("gnomon:stop"),
 
+  getGnomonLogBuffer: () => ipcRenderer.invoke("gnomon:get-log-buffer"),
+
+  removeGnomonLogListener: (cb) =>
+  ipcRenderer.removeListener("gnomon-log", cb),
+
+  removeGnomonExitListener: (cb) =>
+  ipcRenderer.removeListener("gnomon-exit", cb),
+
+
+
   onGnomonLog: (callback) => ipcRenderer.on("gnomon-log", (_, log) => callback(log)),
   onGnomonExit: (callback) => ipcRenderer.on("gnomon-exit", (_, data) => callback(data)),
 

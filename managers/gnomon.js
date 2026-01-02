@@ -15,7 +15,10 @@ export function createGnomonManager() {
       <button id="gnomon-stop">Stop</button>
     </div>
 
-    <pre id="gnomon-log" style="margin-top:15px; height:300px; overflow:auto; background:#111; color:#0f0; padding:10px; border-radius:5px;"></pre>
+    <pre id="gnomon-log"
+      style="margin-top:15px;height:300px;overflow:auto;
+             background:#111;color:#0f0;padding:10px;border-radius:5px;">
+    </pre>
   `;
 
   const led = el.querySelector("#gnomon-status");
@@ -25,14 +28,21 @@ export function createGnomonManager() {
   const logEl = el.querySelector("#gnomon-log");
 
   const api = window.electronAPI;
-
   if (!api) {
-    console.error("electronAPI not found!");
     text.textContent = "electronAPI not available";
     return el;
   }
 
-  // Function to update status LED
+  // ---------- Restore buffered log ----------
+  (async () => {
+    const history = await api.getGnomonLogBuffer();
+    if (history) {
+      logEl.textContent = history;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+  })();
+
+  // ---------- Status ----------
   async function updateStatus() {
     led.className = "led yellow";
     text.textContent = "Checking Gnomon...";
@@ -46,46 +56,43 @@ export function createGnomonManager() {
     }
   }
 
-  // Start button
-  startBtn.addEventListener("click", async () => {
+  // ---------- Buttons ----------
+  startBtn.onclick = async () => {
     text.textContent = "Starting Gnomon...";
-    try {
-      await api.gnomonStart();
-      await updateStatus();
-    } catch (err) {
-      console.error(err);
-      text.textContent = "Failed to start Gnomon";
-    }
-  });
+    await api.gnomonStart();
+    updateStatus();
+  };
 
-  // Stop button
-  stopBtn.addEventListener("click", async () => {
+  stopBtn.onclick = async () => {
     text.textContent = "Stopping Gnomon...";
-    try {
-      await api.gnomonStop();
-      await updateStatus();
-    } catch (err) {
-      console.error(err);
-      text.textContent = "Failed to stop Gnomon";
-    }
-  });
+    await api.gnomonStop();
+    updateStatus();
+  };
 
-  // Live log listener
-  api.onGnomonLog((log) => {
+  // ---------- Named listeners (CRITICAL) ----------
+  const logHandler = (log) => {
     logEl.textContent += log;
-    logEl.scrollTop = logEl.scrollHeight; // auto-scroll
-  });
+    logEl.scrollTop = logEl.scrollHeight;
+  };
 
-  // Exit listener
-  api.onGnomonExit(() => {
+  const exitHandler = () => {
     logEl.textContent += "\n--- Gnomon stopped ---\n";
     updateStatus();
-  });
+  };
 
-  // Check initial status every 2s
+  api.onGnomonLog(logHandler);
+  api.onGnomonExit(exitHandler);
+
+  // ---------- Poll status ----------
   updateStatus();
   const interval = setInterval(updateStatus, 2000);
-  el.cleanup = () => clearInterval(interval);
+
+  // ---------- Cleanup ----------
+  el.cleanup = () => {
+    clearInterval(interval);
+    api.removeGnomonLogListener(logHandler);
+    api.removeGnomonExitListener(exitHandler);
+  };
 
   return el;
 }
